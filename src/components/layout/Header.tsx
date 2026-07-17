@@ -2,15 +2,27 @@
 
 import { useStore } from "@/lib/store";
 import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
-import { Bot, Sun, Moon, Download, PanelLeft } from "lucide-react";
+import { Bot, Sun, Moon, Download, PanelLeft, Save } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export function Header() {
   const sidebarOpen = useStore((s) => s.sidebarOpen);
   const toggleSidebar = useStore((s) => s.toggleSidebar);
   const content = useStore((s) => s.content);
+  const forceSave = useStore((s) => s.forceSave);
   const { theme, setTheme } = useTheme();
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = () => {
+    forceSave();
+    setSaving(true);
+    const now = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    toast.success(`已保存 ${now}`);
+    setTimeout(() => setSaving(false), 1500);
+  };
 
   const handleExport = () => {
     const div = document.createElement("div");
@@ -46,6 +58,10 @@ export function Header() {
 
         <Button variant="ghost" size="sm" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </Button>
+
+        <Button variant="ghost" size="sm" onClick={handleSave}>
+          <Save className={cn("w-4 h-4", saving && "text-[var(--accent-light)]")} />
         </Button>
 
         <Button variant="ghost" size="sm" onClick={handleExport}>

@@ -80,6 +80,7 @@ interface EditorState {
   deleteChapter: (workId: string, chapterId: string) => void;
   deleteWork: (workId: string) => void;
   setChapterContent: (chapterId: string, content: string) => void;
+  forceSave: () => void;
 }
 
 // Persist helper: wraps set() to auto-save persisted fields
@@ -244,6 +245,16 @@ export const useStore = create<EditorState>((set, get) => {
         })),
       }));
       // Persist content changes immediately
+      const state = get();
+      saveState({
+        works: state.works,
+        chapterContents: state.chapterContents,
+        activeWorkId: state.activeWorkId,
+        activeChapterId: state.activeChapterId,
+        theme: state.theme,
+      });
+    },
+    forceSave: () => {
       const state = get();
       saveState({
         works: state.works,
