@@ -54,7 +54,7 @@ function getAnthropic() {
   if (!anthropicInstance) {
     anthropicInstance = createAnthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
-      baseURL: process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com/v1",
+      baseURL: process.env.ANTHROPIC_BASE_URL,
     });
   }
   return anthropicInstance;
@@ -64,7 +64,7 @@ function getDeepSeek() {
   if (!deepseekInstance) {
     deepseekInstance = createDeepSeek({
       apiKey: process.env.DEEPSEEK_API_KEY,
-      baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1",
+      baseURL: process.env.DEEPSEEK_BASE_URL,
     });
   }
   return deepseekInstance;
@@ -74,7 +74,7 @@ function getDoubao() {
   if (!doubaoInstance) {
     doubaoInstance = createOpenAI({
       apiKey: process.env.DOUBAO_API_KEY,
-      baseURL: process.env.DOUBAO_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3",
+      baseURL: process.env.DOUBAO_BASE_URL,
     });
   }
   return doubaoInstance;
