@@ -288,16 +288,5 @@ export const useStore = create<EditorState>((set, get) => {
         theme: state.theme,
       });
     },
-      const state = get();
-      await syncToCloud({ ... });
-        set({
-          works: cloud.works as Work[],
-          chapterContents: cloud.chapterContents as Record<string, string>,
-          activeWorkId: cloud.activeWorkId as string | null,
-          activeChapterId: cloud.activeChapterId as string | null,
-          theme: cloud.theme as "light" | "dark",
-        });
-      }
-    },
   };
 });
