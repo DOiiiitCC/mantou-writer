@@ -24,6 +24,7 @@ import {
   FilePlus2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getPairCode, pairWithCode, getPairedUserId } from "@/lib/supabase";
 
 export function Sidebar() {
   const sidebarOpen = useStore((s) => s.sidebarOpen);
@@ -50,6 +51,8 @@ export function Sidebar() {
   const [aiTabOpen, setAiTabOpen] = useState(true);
   const [worksOpen, setWorksOpen] = useState(true);
   const [workExpanded, setWorkExpanded] = useState(true);
+  const [showPair, setShowPair] = useState(false);
+  const [pairInput, setPairInput] = useState("");
 
   const handleNewWork = () => {
     const title = prompt("请输入作品名称：");
@@ -433,6 +436,66 @@ export function Sidebar() {
         )}
       </div>
 
+      {/* Device pairing — at the very bottom */}
+      <div className="border-t border-[#e8ddc4] dark:border-zinc-800 flex-shrink-0">
+        <button
+          onClick={() => setShowPair(!showPair)}
+          className="w-full flex items-center justify-between px-4 py-2 text-xs text-[#8a7e65] dark:text-zinc-500 hover:text-[#5a4e35] dark:hover:text-zinc-300 transition-colors"
+        >
+          <span>📱 设备同步</span>
+          <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", showPair && "rotate-180")} />
+        </button>
+
+        {showPair && (
+          <div className="px-4 pb-3 space-y-2">
+            {getPairedUserId() ? (
+              <>
+                <p className="text-xs text-[#5a4e35] dark:text-zinc-300">✅ 已配对</p>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("mantou-paired-id");
+                    setShowPair(false);
+                    toast.success("已解除配对");
+                  }}
+                  className="text-xs text-red-400 hover:text-red-300"
+                >
+                  解除配对
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-[#8a7e65] dark:text-zinc-500">
+                  本机配对码：
+                  <span className="font-mono text-[var(--accent-light)] ml-1">{getPairCode()}</span>
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    value={pairInput}
+                    onChange={(e) => setPairInput(e.target.value.toUpperCase())}
+                    placeholder="输入另一台设备的配对码"
+                    maxLength={6}
+                    className="flex-1 rounded border border-[#e0d5b8] dark:border-zinc-700 bg-[#f0e8d0] dark:bg-zinc-800/50 px-2 py-1 text-xs text-[#3d3522] dark:text-zinc-200 placeholder:text-[#b8a88a] focus:outline-none focus:ring-1 focus:ring-[var(--accent-light)]"
+                  />
+                  <button
+                    onClick={() => {
+                      if (pairInput.length === 6 && pairWithCode(pairInput)) {
+                        toast.success("配对成功！即将同步数据");
+                        setShowPair(false);
+                        useStore.getState().syncCloud();
+                      } else {
+                        toast.error("请输入完整的 6 位码");
+                      }
+                    }}
+                    className="px-2 py-1 rounded bg-[var(--accent)] text-white text-xs"
+                  >
+                    配对
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

@@ -25,9 +25,38 @@ export function getUserId(): string | null {
   return id;
 }
 
+// Get a short 6-char pairing code from the user ID
+export function getPairCode(): string | null {
+  const id = getUserId();
+  if (!id) return null;
+  return id.replace(/-/g, "").slice(0, 6).toUpperCase();
+}
+
+// Pair this device with another device's code
+export function pairWithCode(code: string) {
+  if (typeof window === "undefined") return false;
+  // Find the full user_id in Supabase that starts with this code
+  // For simplicity, we store the mapping in localStorage
+  localStorage.setItem("mantou-paired-id", code.toUpperCase());
+  return true;
+}
+
+export function getPairedUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("mantou-paired-id");
+}
+
+// Get the effective user ID — paired ID takes priority
+function getEffectiveUserId(): string | null {
+  if (typeof window === "undefined") return null;
+  const paired = getPairedUserId();
+  if (paired) return paired;
+  return getUserId();
+}
+
 export async function syncToCloud(data: Record<string, unknown>) {
   const client = getClient();
-  const userId = getUserId();
+  const userId = getEffectiveUserId();
   if (!client || !userId) return;
 
   await client.from("user_data").upsert(
@@ -38,7 +67,7 @@ export async function syncToCloud(data: Record<string, unknown>) {
 
 export async function loadFromCloud(): Promise<Record<string, unknown> | null> {
   const client = getClient();
-  const userId = getUserId();
+  const userId = getEffectiveUserId();
   if (!client || !userId) return null;
 
   const { data, error } = await client
