@@ -5,7 +5,6 @@ let supabaseClient: SupabaseClient | null = null;
 function getClient(): SupabaseClient | null {
   if (typeof window === "undefined") return null;
   if (supabaseClient) return supabaseClient;
-
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
@@ -13,44 +12,43 @@ function getClient(): SupabaseClient | null {
   return supabaseClient;
 }
 
-// Get the current device's user ID — used as sync key
-export function getUserId(): string | null {
+// Simple sync key — user sets it once, same key on all devices = shared data
+const SYNC_KEY = "mantou-sync-key";
+
+export function getSyncKey(): string | null {
   if (typeof window === "undefined") return null;
-  const key = "mantou-user-id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(key, id);
-  }
-  return id;
+  return localStorage.getItem(SYNC_KEY);
 }
 
-// Replace this device's user ID with a shared one from another device
-export function setUserId(id: string) {
+export function setSyncKey(key: string) {
   if (typeof window === "undefined") return;
-  localStorage.setItem("mantou-user-id", id);
+  localStorage.setItem(SYNC_KEY, key);
+}
+
+export function hasSyncKey(): boolean {
+  return !!getSyncKey();
 }
 
 export async function syncToCloud(data: Record<string, unknown>) {
   const client = getClient();
-  const userId = getUserId();
-  if (!client || !userId) return;
+  const key = getSyncKey();
+  if (!client || !key) return;
 
   await client.from("user_data").upsert(
-    { user_id: userId, data, updated_at: new Date().toISOString() },
+    { user_id: key, data, updated_at: new Date().toISOString() },
     { onConflict: "user_id" }
   );
 }
 
 export async function loadFromCloud(): Promise<Record<string, unknown> | null> {
   const client = getClient();
-  const userId = getUserId();
-  if (!client || !userId) return null;
+  const key = getSyncKey();
+  if (!client || !key) return null;
 
   const { data, error } = await client
     .from("user_data")
     .select("data")
-    .eq("user_id", userId)
+    .eq("user_id", key)
     .maybeSingle();
 
   if (error || !data) return null;
