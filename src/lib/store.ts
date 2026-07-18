@@ -268,11 +268,26 @@ export const useStore = create<EditorState>((set, get) => {
         theme: state.theme,
       });
     },
-syncCloud: async () => {
+    syncCloud: async () => {
       const cloud = await loadFromCloud();
       if (cloud && cloud.works) {
-        set({ ... });
+        set({
+          works: cloud.works,
+          chapterContents: cloud.chapterContents,
+          activeWorkId: cloud.activeWorkId,
+          activeChapterId: cloud.activeChapterId,
+          theme: cloud.theme,
+        });
       }
+      const state = get();
+      await syncToCloud({
+        works: state.works,
+        chapterContents: state.chapterContents,
+        activeWorkId: state.activeWorkId,
+        activeChapterId: state.activeChapterId,
+        theme: state.theme,
+      });
+    },
       const state = get();
       await syncToCloud({ ... });
         set({
