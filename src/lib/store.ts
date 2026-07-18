@@ -268,18 +268,13 @@ export const useStore = create<EditorState>((set, get) => {
         theme: state.theme,
       });
     },
-    syncCloud: async () => {
-      const state = get();
-      await syncToCloud({
-        works: state.works,
-        chapterContents: state.chapterContents,
-        activeWorkId: state.activeWorkId,
-        activeChapterId: state.activeChapterId,
-        theme: state.theme,
-      });
-      // Also load from cloud to merge any other device's changes
+syncCloud: async () => {
       const cloud = await loadFromCloud();
       if (cloud && cloud.works) {
+        set({ ... });
+      }
+      const state = get();
+      await syncToCloud({ ... });
         set({
           works: cloud.works as Work[],
           chapterContents: cloud.chapterContents as Record<string, string>,
