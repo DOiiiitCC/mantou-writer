@@ -269,7 +269,6 @@ export const useStore = create<EditorState>((set, get) => {
       });
     },
     syncCloud: async () => {
-      // Load from cloud FIRST, merge into local state
       const cloud = await loadFromCloud();
       if (cloud && cloud.works) {
         set({
@@ -280,7 +279,6 @@ export const useStore = create<EditorState>((set, get) => {
           theme: cloud.theme as "light" | "dark",
         });
       }
-      // Then push local state to cloud
       const state = get();
       await syncToCloud({
         works: state.works,
