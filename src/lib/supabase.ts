@@ -35,9 +35,7 @@ export function getPairCode(): string | null {
 // Pair this device with another device's code
 export function pairWithCode(code: string) {
   if (typeof window === "undefined") return false;
-  // Find the full user_id in Supabase that starts with this code
-  // For simplicity, we store the mapping in localStorage
-  localStorage.setItem("mantou-paired-id", code.toUpperCase());
+  localStorage.setItem("mantou-pair-code", code.toUpperCase());
   return true;
 }
 
@@ -46,17 +44,43 @@ export function getPairedUserId(): string | null {
   return localStorage.getItem("mantou-paired-id");
 }
 
-// Get the effective user ID — paired ID takes priority
-function getEffectiveUserId(): string | null {
+// Look up the full user_id from Supabase by pair code prefix
+async function resolvePairCode(code: string): Promise<string | null> {
+  const client = getClient();
+  if (!client) return null;
+  const { data } = await client
+    .from("user_data")
+    .select("user_id")
+    .ilike("user_id", `${code.toLowerCase()}%`)
+    .limit(1)
+    .maybeSingle();
+  return data?.user_id || null;
+}
+
+// Get the effective user ID — resolves pair code to full ID
+async function getEffectiveUserId(): Promise<string | null> {
   if (typeof window === "undefined") return null;
+
+  // Already resolved paired ID
   const paired = getPairedUserId();
   if (paired) return paired;
+
+  // Have a pair code but not yet resolved
+  const pairCode = localStorage.getItem("mantou-pair-code");
+  if (pairCode) {
+    const fullId = await resolvePairCode(pairCode);
+    if (fullId) {
+      localStorage.setItem("mantou-paired-id", fullId);
+      return fullId;
+    }
+  }
+
   return getUserId();
 }
 
 export async function syncToCloud(data: Record<string, unknown>) {
   const client = getClient();
-  const userId = getEffectiveUserId();
+  const userId = await getEffectiveUserId();
   if (!client || !userId) return;
 
   await client.from("user_data").upsert(
@@ -67,7 +91,7 @@ export async function syncToCloud(data: Record<string, unknown>) {
 
 export async function loadFromCloud(): Promise<Record<string, unknown> | null> {
   const client = getClient();
-  const userId = getEffectiveUserId();
+  const userId = await getEffectiveUserId();
   if (!client || !userId) return null;
 
   const { data, error } = await client
