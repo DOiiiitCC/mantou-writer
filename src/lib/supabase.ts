@@ -1,14 +1,21 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+let supabaseClient: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false },
-});
+function getClient(): SupabaseClient | null {
+  if (typeof window === "undefined") return null;
+  if (supabaseClient) return supabaseClient;
 
-// Get or create a persistent anonymous user ID
-export function getUserId(): string {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) return null;
+  supabaseClient = createClient(url, key, { auth: { persistSession: false } });
+  return supabaseClient;
+}
+
+export function getUserId(): string | null {
+  if (typeof window === "undefined") return null;
   const key = "mantou-user-id";
   let id = localStorage.getItem(key);
   if (!id) {
@@ -18,28 +25,27 @@ export function getUserId(): string {
   return id;
 }
 
-// Sync data to Supabase
 export async function syncToCloud(data: Record<string, unknown>) {
+  const client = getClient();
   const userId = getUserId();
-  const { error } = await supabase.from("user_data").upsert(
-    {
-      user_id: userId,
-      data,
-      updated_at: new Date().toISOString(),
-    },
+  if (!client || !userId) return;
+
+  await client.from("user_data").upsert(
+    { user_id: userId, data, updated_at: new Date().toISOString() },
     { onConflict: "user_id" }
   );
-  if (error) console.error("Sync error:", error);
 }
 
-// Load data from Supabase
 export async function loadFromCloud(): Promise<Record<string, unknown> | null> {
+  const client = getClient();
   const userId = getUserId();
-  const { data, error } = await supabase
+  if (!client || !userId) return null;
+
+  const { data, error } = await client
     .from("user_data")
     .select("data")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
   return data.data as Record<string, unknown>;
