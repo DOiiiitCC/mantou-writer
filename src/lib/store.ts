@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { ModelProvider } from "./ai/providers";
 import type { WriteMode } from "./ai/prompts";
+import { syncToCloud, loadFromCloud } from "./supabase";
 
 const STORAGE_KEY = "mantou-writer-storage";
 
@@ -42,6 +43,8 @@ function saveState(state: Partial<EditorState>) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {}
+  // Fire-and-forget cloud sync (don't block UI)
+  syncToCloud(state as Record<string, unknown>).catch(() => {});
 }
 
 const saved = loadState();
@@ -81,6 +84,7 @@ interface EditorState {
   deleteWork: (workId: string) => void;
   setChapterContent: (chapterId: string, content: string) => void;
   forceSave: () => void;
+  syncCloud: () => Promise<void>;
 }
 
 // Persist helper: wraps set() to auto-save persisted fields
@@ -263,6 +267,27 @@ export const useStore = create<EditorState>((set, get) => {
         activeChapterId: state.activeChapterId,
         theme: state.theme,
       });
+    },
+    syncCloud: async () => {
+      const state = get();
+      await syncToCloud({
+        works: state.works,
+        chapterContents: state.chapterContents,
+        activeWorkId: state.activeWorkId,
+        activeChapterId: state.activeChapterId,
+        theme: state.theme,
+      });
+      // Also load from cloud to merge any other device's changes
+      const cloud = await loadFromCloud();
+      if (cloud && cloud.works) {
+        set({
+          works: cloud.works as Work[],
+          chapterContents: cloud.chapterContents as Record<string, string>,
+          activeWorkId: cloud.activeWorkId as string | null,
+          activeChapterId: cloud.activeChapterId as string | null,
+          theme: cloud.theme as "light" | "dark",
+        });
+      }
     },
   };
 });
