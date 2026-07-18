@@ -278,6 +278,15 @@ export const useStore = create<EditorState>((set, get) => {
           activeChapterId: cloud.activeChapterId as string | null,
           theme: cloud.theme as "light" | "dark",
         });
+        // Also save to localStorage so it persists on refresh
+        const state = get();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          works: state.works,
+          chapterContents: state.chapterContents,
+          activeWorkId: state.activeWorkId,
+          activeChapterId: state.activeChapterId,
+          theme: state.theme,
+        }));
       }
       const state = get();
       await syncToCloud({

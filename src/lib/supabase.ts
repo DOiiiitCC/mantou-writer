@@ -8,12 +8,12 @@ function getClient(): SupabaseClient | null {
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   if (!url || !key) return null;
   supabaseClient = createClient(url, key, { auth: { persistSession: false } });
   return supabaseClient;
 }
 
+// Get the current device's user ID — used as sync key
 export function getUserId(): string | null {
   if (typeof window === "undefined") return null;
   const key = "mantou-user-id";
@@ -25,62 +25,15 @@ export function getUserId(): string | null {
   return id;
 }
 
-// Get a short 6-char pairing code from the user ID
-export function getPairCode(): string | null {
-  const id = getUserId();
-  if (!id) return null;
-  return id.replace(/-/g, "").slice(0, 6).toUpperCase();
-}
-
-// Pair this device with another device's code
-export function pairWithCode(code: string) {
-  if (typeof window === "undefined") return false;
-  localStorage.setItem("mantou-pair-code", code.toUpperCase());
-  return true;
-}
-
-export function getPairedUserId(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("mantou-paired-id");
-}
-
-// Look up the full user_id from Supabase by pair code prefix
-async function resolvePairCode(code: string): Promise<string | null> {
-  const client = getClient();
-  if (!client) return null;
-  const { data } = await client
-    .from("user_data")
-    .select("user_id")
-    .ilike("user_id", `${code.toLowerCase()}%`)
-    .limit(1)
-    .maybeSingle();
-  return data?.user_id || null;
-}
-
-// Get the effective user ID — resolves pair code to full ID
-async function getEffectiveUserId(): Promise<string | null> {
-  if (typeof window === "undefined") return null;
-
-  // Already resolved paired ID
-  const paired = getPairedUserId();
-  if (paired) return paired;
-
-  // Have a pair code but not yet resolved
-  const pairCode = localStorage.getItem("mantou-pair-code");
-  if (pairCode) {
-    const fullId = await resolvePairCode(pairCode);
-    if (fullId) {
-      localStorage.setItem("mantou-paired-id", fullId);
-      return fullId;
-    }
-  }
-
-  return getUserId();
+// Replace this device's user ID with a shared one from another device
+export function setUserId(id: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("mantou-user-id", id);
 }
 
 export async function syncToCloud(data: Record<string, unknown>) {
   const client = getClient();
-  const userId = await getEffectiveUserId();
+  const userId = getUserId();
   if (!client || !userId) return;
 
   await client.from("user_data").upsert(
@@ -91,7 +44,7 @@ export async function syncToCloud(data: Record<string, unknown>) {
 
 export async function loadFromCloud(): Promise<Record<string, unknown> | null> {
   const client = getClient();
-  const userId = await getEffectiveUserId();
+  const userId = getUserId();
   if (!client || !userId) return null;
 
   const { data, error } = await client
